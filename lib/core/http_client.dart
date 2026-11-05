@@ -56,7 +56,7 @@ class ApiClient {
     final json = _tryDecode(response);
     final code = response.statusCode;
     if (code >= 200 && code <= 300) return json;
-    throw const NetworkFailure();
+    throw mapHttpError(code, json);
   }
 
   dynamic _tryDecode(http.Response response) {
@@ -67,5 +67,39 @@ class ApiClient {
     } on FormatException {
       return null;
     }
+  }
+
+  //Direccionamiento de los errores fuera de los 200's y los 300's
+  Failure mapHttpError(int code, Object? json) {
+    return switch (code) {
+      404 => NotFoundFailure(_detailMessage(json, 'No encontrado')),
+      409 => ConflictFailure(_detailMessage(json, 'Conflicto')),
+      422 => ValidationFailure(_fieldsFrom(json)),
+      _ => const NetworkFailure(),
+    };
+  }
+
+  String _detailMessage(Object? json, [String fallback = '']) {
+    if (json is Map && json['detail'] is String) {
+      return json['detail'] as String;
+    }
+    return fallback;
+  }
+
+  Map<String, String> _fieldsFrom(Object? json) {
+    final fields = <String, String>{};
+    if (json is Map && json['detail'] is List) {
+      for (final error in json['detail'] as List) {
+        if (error is Map && error['loc'] is List && error['msg'] is String) {
+          final loc = error['loc'] as List;
+          if (loc.length > 1) {
+            fields[loc[1].toString()] = error['msg'] as String;
+          } else if (loc.isNotEmpty) {
+            fields[loc.last.toString()] = error['msg'] as String;
+          }
+        }
+      }
+    }
+    return fields;
   }
 }
