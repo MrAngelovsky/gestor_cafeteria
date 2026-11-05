@@ -75,7 +75,11 @@ class ApiClient {
       404 => NotFoundFailure(_detailMessage(json, 'No encontrado')),
       409 => ConflictFailure(_detailMessage(json, 'Conflicto')),
       422 => ValidationFailure(_fieldsFrom(json)),
-      _ => const NetworkFailure(),
+      >= 500 && < 600 => ServerFailure(code),
+      _ => UnexpectedFailure(
+        code,
+        _detailMessage(json, 'Error inesperado ($code)'),
+      ),
     };
   }
 
