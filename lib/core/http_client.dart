@@ -53,7 +53,7 @@ class ApiClient {
     }
     final json = _tryDecode(response);
     final code = response.statusCode;
-    if (code >= 200 && code <= 300) return json;
+    if (code >= 200 && code < 300) return json;
     throw mapHttpError(code, json);
   }
 
